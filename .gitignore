@@ -1,4 +1,6 @@
 data
 models
 test.ipynb
+test.py
 .env
+*__pycache__

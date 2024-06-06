@@ -10,3 +10,8 @@ Research project under NTU Digital Trust Centre (DTC)
 [Harry Potter Books](https://www.kaggle.com/datasets/shubhammaindola/harry-potter-books)
 
 
+### Demo
+In terminal, run:
+```streamlit run demo_app.py```
+
+

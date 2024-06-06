@@ -1,4 +1,5 @@
 from transformers import LlamaForCausalLM, LlamaTokenizer, AutoModelForCausalLM, AutoTokenizer, pipeline
+from langchain_huggingface.llms import HuggingFacePipeline
 import torch, os
 import numpy as np
 from dotenv import load_dotenv
@@ -6,12 +7,17 @@ load_dotenv()
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+
+# model_id = "microsoft/Llama2-7b-WhoIsHarryPotter"
+# prompt = "Who is Harry Potter?"
+# pipe = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation", device=0, pipeline_kwargs={"max_new_tokens": 30},)
+# print(pipe.invoke(prompt))
 # model=LlamaForCausalLM.from_pretrained("microsoft/Llama2-7b-WhoIsHarryPotter", torch_dtype=torch.bfloat16).to(device)
-# tokenizer= LlamaTokenizer.from_pretrained("microsoft/Llama2-7b-WhoIsHarryPotter")
+tokenizer= LlamaTokenizer.from_pretrained("microsoft/Llama2-7b-WhoIsHarryPotter")
 access_token = os.environ["HUGGINGFACE_TOKEN"]
 prompt = "Harry Potter said "
 
-pipe = pipeline("text-generation", model="meta-llama/Llama-2-7b-hf", max_new_tokens=30, token=access_token)
+pipe = pipeline("text-generation", model="meta-llama/Llama-2-7b-chat-hf", max_new_tokens=30, token=access_token)
 
 print(pipe(prompt))
 
