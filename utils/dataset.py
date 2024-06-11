@@ -9,6 +9,7 @@ def tokenize_function(datapoint):
     # Returns tokenized string
     return tokenizer(datapoint["text"])
 
+
 def group_texts(examples):
     # Concatenate all texts.
     concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
@@ -24,18 +25,34 @@ def group_texts(examples):
     result["labels"] = result["input_ids"].copy()
     return result
 
-def load(src_dir="./data/HarryPotter"):
+
+def load_custom_dataset(src_dir="./data/HarryPotter/raw", test_size=0.2):
     # Load all .txt files in specified directory
     ds = load_dataset("text", data_files=os.path.join(src_dir,"*.txt"))["train"]
 
     # Clean dataset
-    ds_clean = ds.filter(lambda line: len(line["text"])>5)
-    ds_clean = ds_clean.filter(lambda line: not line["text"].isupper())
+    ds_clean = ds.filter(lambda line: len(line["text"])>5) # Remove all lines <= 5 characters (e.g. '* * *', empty lines)
+    ds_clean = ds_clean.filter(lambda line: not line["text"].isupper()) # Remove all lines that are only uppercase letters (e.g. 'CHAPTER THREE')
 
     # Tokenize dataset
     ds_tokenized = ds_clean.map(tokenize_function, batched=True, num_proc=4, remove_columns=["text"])
 
     # Group texts into block_size
     ds_final = ds_tokenized.map(group_texts, batched=True, batch_size=1000, num_proc=4)
+    
+    # Split into train/test
+    ds_split = ds_final.train_test_split(test_size=test_size)
 
-    return ds_final.train_test_split(test_size=0.2)
+    return ds_split
+
+
+def write_custom_dataset(dataset, dst_dir="./data/HarryPotter"):
+    for split, ds_split in dataset.items():
+        file_path = os.path.join(dst_dir, split+".jsonl")
+        ds_split.to_json(file_path)
+    
+
+
+'''
+Code adapted from https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/language_modeling.ipynb#scrollTo=gXUSfBrq3l_C
+'''
