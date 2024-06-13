@@ -23,7 +23,7 @@ def load_pipeline(model_id, max_new_tokens=200):
     if model_id == LLM.reinforced.value:
         base_model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_cache=True, local_files_only=True)
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
-        model = PeftModel.from_pretrained(base_model,"./models/Llama-2-7b-chat-hf-reinforced-HarryPotter/checkpoint-60")
+        model = PeftModel.from_pretrained(base_model,"./models/Llama-2-7b-chat-hf-HarryPotter/final")
         pipe = HuggingFacePipeline(pipeline=pipeline("text-generation", model=model, tokenizer=tokenizer, device=0, max_new_tokens=max_new_tokens))
     else:
         pipe = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation", device=0, pipeline_kwargs={"max_new_tokens": max_new_tokens},)

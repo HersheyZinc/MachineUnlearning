@@ -9,6 +9,9 @@ Research project under NTU Digital Trust Centre (DTC)
 ### Datasets
 [Harry Potter Books](https://www.kaggle.com/datasets/shubhammaindola/harry-potter-books)
 
+### Extract Token Probabilities
+[Discussion](https://discuss.huggingface.co/t/announcement-generation-get-probabilities-for-generated-output/30075)
+[Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1b6xbg9/displayingreturning_probabilitieslogprobs_of_next/)
 
 ### Demo
 In terminal, run:

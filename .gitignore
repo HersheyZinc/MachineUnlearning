@@ -4,3 +4,4 @@ test.ipynb
 test.py
 .env
 *__pycache__
+nohup.out

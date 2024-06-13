@@ -52,6 +52,29 @@ def write_custom_dataset(dataset, dst_dir="./data/HarryPotter"):
         ds_split.to_json(file_path)
     
 
+def format_SFTT(line):
+    raw_text = line["text"]
+    words = raw_text.split(" ")
+    split = len(words)//2
+
+    prompt = " ".join(words[:split])
+    completion = " ".join(words[split:])
+    return {"prompt": prompt, "completion": completion}
+
+
+def load_custom_dataset2(src_dir="./data/HarryPotter/raw", test_size=0.2):
+    # Load all .txt files in specified directory
+    ds = load_dataset("text", data_files=os.path.join(src_dir,"*.txt"))["train"]
+    # Clean dataset
+    ds_clean = ds.filter(lambda line: len(line["text"].split(" "))>5) # Remove all lines <= 5 words (e.g. '* * *', empty lines)
+    ds_clean = ds_clean.filter(lambda line: not line["text"].isupper()) # Remove all lines that are only uppercase letters (e.g. 'CHAPTER THREE')
+
+    ds_formatted = ds_clean.map(format_SFTT, remove_columns=["text"])
+
+    # Split into train/test
+    ds_split = ds_formatted.train_test_split(test_size=test_size)
+
+    return ds_split
 
 '''
 Code adapted from https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/language_modeling.ipynb#scrollTo=gXUSfBrq3l_C
