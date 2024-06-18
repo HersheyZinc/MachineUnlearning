@@ -28,17 +28,17 @@ model = AutoModelForCausalLM.from_pretrained(model_checkpoint, use_cache=False, 
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 tokenizer.pad_token = tokenizer.eos_token
 
-
 # Load LoRa config
 model.gradient_checkpointing_enable()
 model = prepare_model_for_kbit_training(model)
 
 peft_config = LoraConfig(
     inference_mode=False, 
-    r=16, lora_alpha=32, 
+    r=64, lora_alpha=256, 
     lora_dropout=0.1, 
     bias="none", 
-    task_type="CAUSAL_LM"
+    task_type="CAUSAL_LM",
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"]
 )
 model = get_peft_model(model, peft_config)
 
