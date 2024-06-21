@@ -9,7 +9,7 @@ from huggingface_hub import login
 load_dotenv()
 login(token=os.environ["HUGGINGFACE_TOKEN"])
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-
+MODEL_NAME = "HarryPotter_10epoch"
 
 # from utils.dataset import load_custom_dataset, write_custom_dataset
 # dataset = load_custom_dataset(src_dir="./data/HarryPotter/raw", test_size=0.2)
@@ -46,13 +46,14 @@ print(model.print_trainable_parameters())
 
 
 training_args = SFTConfig(
-    output_dir = f"models/{model_name}-HarryPotter",
+    output_dir = f"models/{model_name}-{MODEL_NAME}",
     learning_rate=3e-6, # Paper specifications
     gradient_accumulation_steps=16, # Paper specifications
     per_device_train_batch_size=8, # Paper specifications
-    num_train_epochs=3, # Paper specifications
+    num_train_epochs=10, # Paper specifications
     max_seq_length=512, # Paper specifications
     overwrite_output_dir=True,
+    save_strategy="epoch",
     seed=42,
 )
 

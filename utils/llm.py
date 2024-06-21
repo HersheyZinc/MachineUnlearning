@@ -5,7 +5,6 @@ from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesP
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import gc, torch, tiktoken
 from peft import PeftModel
-import numpy as np
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 def get_token_count(model_id, text):
@@ -57,17 +56,6 @@ def call_llm(model_id, user_input):
     return cleaned_response
 
 
-def get_logit_vector(model, tokenizer, prompt):
-    inputs = tokenizer([prompt], return_tensors="pt").to(device)
-    outputs = model.generate(**inputs, return_dict_in_generate=True, output_scores=True, output_logits=True, max_new_tokens=1)
-    logits = outputs.logits[0][0].cpu().numpy()
-
-    return logits
-
-
-def calculate_logits_generic(logits_base, logits_reinforced, sigma=5):
-    # v_generic = v_baseline - sigma*ReLu(v_reinforced - v_baseline)
-    return logits_base - sigma * np.maximum(0, logits_reinforced - logits_base)
 
 
 
