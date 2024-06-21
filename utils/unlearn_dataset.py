@@ -1,6 +1,11 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def create_unlearn_dataset(baseline_model, reinforced_model, T, D:dict):
+    """
+    Function to create fine-tuning dataset based on Algorthm 1
+    TODO: implement pseudo code
+    """
+
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_fast=True)
 
     finetune_data = []

@@ -6,6 +6,10 @@ load_dotenv(override=True)
 enc = tiktoken.encoding_for_model("gpt-4o")
 
 def get_anchor_terms(prompt, model="gpt-4o", temperature=0):
+    """
+    GPT-4o call to perform simpe entity extraction on the unlearn target
+    """
+    # TODO: prompt engineering, add API key to .env file
     system_prompt = """
     You are an expert linguist designed to output JSON. You are tasked to perform entity extraction on the given text. For each entity, 
 
