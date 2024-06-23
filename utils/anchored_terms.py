@@ -1,24 +1,41 @@
 from openai import OpenAI
-import json, tiktoken
+import json
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-enc = tiktoken.encoding_for_model("gpt-4o")
 
-def get_anchor_terms(prompt, model="gpt-4o", temperature=0):
+def get_anchor_terms(prompt, model="gpt-4o", temperature=0, subject="Harry Potter"):
     """
-    GPT-4o call to perform simpe entity extraction on the unlearn target
+    GPT-4o call to perform simple entity extraction on the unlearn target
+
+    Parameters
+    ------------
+    prompt: str
+        string to be passed for entity extraction
+    model: str
+        GPT model to call (see https://platform.openai.com/docs/models/)
+    temperature: float
+        temperature of model
+    subject: str
+        subject to be replaced with generic terms
+
+    Returns
+    ------------
+    dict
+        Python dictionary with {anchor terms:generic translation} key-value pairs
+
     """
     # TODO: prompt engineering, add API key to .env file
-    system_prompt = """
-    You are an expert linguist designed to output JSON. You are tasked to perform entity extraction on the given text. For each entity, 
+    system_prompt = f"""
+    You are an expert linguist designed to output JSON. You are tasked to extract a list of expressions, names or entities which are idiosyncratic to the text.
+    For each such expression, provide an alternative expression that would still be suitable in terms of text coherence, but is not unique to the {subject} context.
 
 
     Output Format:
     {{
-        'expression_1': 'alternative expression',
-        'expression_2': 'alternative expression',
-        'name_1': 'alternative name',
+        'Hogwarts': 'Magic Academy',
+        'Harry': 'Jon',
+        'Slytherin': 'Snake house',
         ...
     }}
     """
