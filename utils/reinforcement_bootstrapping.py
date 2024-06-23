@@ -55,20 +55,30 @@ def get_generic_prediction(base_model, reinforced_model, tokenizer, prompt, sigm
 
     # v_generic = v_baseline - sigma*ReLu(v_reinforced - v_baseline)
     v_generic = v_baseline - sigma * np.maximum(0, v_reinforced - v_baseline)
-    
+    # v_generic = v_baseline - sigma * (v_reinforced - v_baseline)
+
     generic_token = np.argmax(v_generic)
     return generic_token
 
 
-def print_topk(model, tokenizer, prompt, k=10):
+def print_topk_logits(model, tokenizer, prompt, k=10):
     """
-    Debug function - prints the top k tokens and their probabilities
+    Debug function - prints the top k tokens by logits
+    """
+    logit_vector = get_logit_vector(model, tokenizer, prompt)
+    topk_logit_vector = torch.topk(logit_vector, k)
+    print(*[(tokenizer.decode(idx), prob) for idx, prob in zip(topk_logit_vector.indices, topk_logit_vector.values)], sep="\n")
+
+
+def print_topk_probabilities(model, tokenizer, prompt, k=10):
+    """
+    Debug function - prints the top k tokens by softmax probabilities
     """
     logit_vector = get_logit_vector(model, tokenizer, prompt)
     prob_vector = torch.softmax(logit_vector, -1)
     topk_prob_vector = torch.topk(prob_vector, k)
     print(*[(tokenizer.decode(idx), prob) for idx, prob in zip(topk_prob_vector.indices, topk_prob_vector.values)], sep="\n")
-    return topk_prob_vector
+    # return topk_prob_vector
 
 
 ### Adapted from https://stackoverflow.com/questions/76397904/generate-the-probabilities-of-all-the-next-possible-word-for-a-given-text
