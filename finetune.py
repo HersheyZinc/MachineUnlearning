@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # from datasets import load_dataset
 from utils.reinforcement_dataset import preprocess_reinforcement_dataset as load_dataset
-dataset = load_dataset(src_dir="./data/HarryPotter/raw", test_size=0.2)
+dataset = load_dataset(src_dir="./data/HarryPotter/raw", test_size=0.1)
 train_dataset, eval_dataset = dataset["train"], dataset["test"]
 
 
@@ -79,8 +79,8 @@ training_args = TrainingArguments(
     learning_rate=3e-6, # Paper specifications
     gradient_accumulation_steps=16, # Paper specifications
     per_device_train_batch_size=8, # Paper specifications
-    num_train_epochs=3, # Paper specifications
-    max_seq_length=512, # Paper specifications
+    num_train_epochs=10, # Paper specifications
+    # max_seq_length=512, # Paper specifications
 )
 
 
@@ -105,7 +105,7 @@ trainer = Trainer(
 if training_args.do_train:
     checkpoint=None
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    trainer.save_model()  # Saves the tokenizer too for easy upload
+    trainer.save_model("models/HarryPotter/final")  # Saves the tokenizer too for easy upload
 
     metrics = train_result.metrics
 
