@@ -79,7 +79,7 @@ training_args = TrainingArguments(
     learning_rate=3e-6, # Paper specifications
     gradient_accumulation_steps=16, # Paper specifications
     per_device_train_batch_size=8, # Paper specifications
-    num_train_epochs=10, # Paper specifications
+    num_train_epochs=20, # Paper specifications
     # max_seq_length=512, # Paper specifications
 )
 

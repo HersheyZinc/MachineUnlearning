@@ -55,44 +55,15 @@ def preprocess_reinforcement_dataset(src_dir="./data/HarryPotter/raw", test_size
     ds_clean = ds.filter(lambda line: len(line["text"].split(" "))>5) # Remove all lines <= 5 words (e.g. '* * *', empty lines)
     ds_clean = ds_clean.filter(lambda line: not line["text"].isupper()) # Remove all lines that are only uppercase letters (e.g. 'CHAPTER THREE')
 
-    ds_split = ds_clean.train_test_split(test_size=test_size)
+    if test_size > 0:
+        ds_split = ds_clean.train_test_split(test_size=test_size)
+    else:
+        ds_split = ds_clean
 
     ds_tokenize = ds_split.map(tokenize_function, batched=True, remove_columns=["text"])
 
-    lm_datasets = ds_tokenize.map(
-                group_texts,
-                batched=True,
-            )
+    lm_datasets = ds_tokenize.map(group_texts, batched=True)
 
     return lm_datasets
 
-# def split_prompt_completion(line):
-#     raw_text = line["text"]
-#     words = raw_text.split(" ")
-#     split = len(words)//2
-#     prompt = " ".join(words[:split])
-#     completion = " ".join(words[split:])
-#     return {"prompt": prompt, "completion": completion}
 
-
-# def load_custom_dataset(src_dir="./data/HarryPotter/raw", test_size=0.2):
-#     # Load all .txt files in specified directory
-#     ds = load_dataset("text", data_files=os.path.join(src_dir,"*.txt"))["train"]
-#     # Clean dataset
-#     ds_clean = ds.filter(lambda line: len(line["text"].split(" "))>5) # Remove all lines <= 5 words (e.g. '* * *', empty lines)
-#     ds_clean = ds_clean.filter(lambda line: not line["text"].isupper()) # Remove all lines that are only uppercase letters (e.g. 'CHAPTER THREE')
-
-#     ds_formatted = ds_clean.map(split_prompt_completion, remove_columns=["text"])
-
-#     # Split into train/test
-#     ds_split = ds_formatted.train_test_split(test_size=test_size)
-
-#     return ds_split
-
-
-# if __name__ == "__main__":
-#     # # Load the dataset
-#     dataset = load_custom_dataset(test_size=0.2)
-
-#     # Write the dataset to the specified directory
-#     write_custom_dataset(dataset)

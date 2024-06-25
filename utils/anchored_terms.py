@@ -1,6 +1,9 @@
 from openai import OpenAI
-import json
 from dotenv import load_dotenv
+from datasets import load_dataset
+from transformers import AutoTokenizer
+from tqdm import tqdm
+import os, time, json
 load_dotenv(override=True)
 
 
@@ -52,3 +55,25 @@ def get_anchor_terms(prompt, model="gpt-4o", temperature=0, subject="Harry Potte
     response = response.choices[0].message.content
     response = json.loads(response)
     return response
+
+
+
+def entity_extraction(src_dir="./data/HarryPotter/raw", dst_file = "./data/HarryPotter/anchor_terms.json", subject = "Harry Potter"):
+
+    # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
+    anchor_terms = {}
+    ds = load_dataset("text", data_files=os.path.join(src_dir,"*.txt"))["train"]
+    # Clean dataset
+    ds_clean = ds.filter(lambda line: len(line["text"].split(" "))>5) # Remove all lines <= 5 words (e.g. '* * *', empty lines)
+    ds_clean = ds_clean.filter(lambda line: not line["text"].isupper()) # Remove all lines that are only uppercase letters (e.g. 'CHAPTER THREE')
+    for line in tqdm(ds_clean["text"]):
+        try:
+            result_dict = get_anchor_terms(line, subject=subject)
+            time.sleep(0.005)
+            anchor_terms.update(result_dict)
+        except Exception as e:
+            print("Error:" , e)
+            continue
+
+    with open(dst_file, "w") as f:
+        json.dump(anchor_terms, f)
