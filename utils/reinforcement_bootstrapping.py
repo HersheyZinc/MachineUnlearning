@@ -75,6 +75,7 @@ def print_topk_probabilities(model, tokenizer, prompt, k=10):
     Debug function - prints the top k tokens by softmax probabilities
     """
     logit_vector = get_logit_vector(model, tokenizer, prompt)
+    
     prob_vector = torch.softmax(logit_vector, -1)
     topk_prob_vector = torch.topk(prob_vector, k)
     print(*[(tokenizer.decode(idx), prob) for idx, prob in zip(topk_prob_vector.indices, topk_prob_vector.values)], sep="\n")

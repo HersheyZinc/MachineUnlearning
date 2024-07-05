@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import gc, torch, tiktoken
-from transformers import LlamaForCausalLM, LlamaTokenizer
 from peft import PeftModel
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -35,10 +34,10 @@ def load_pipeline(model_id, max_new_tokens=200):
 
         fine_tuned_model_path = "/root/daeun004/machine_unlearning/MachineUnlearning/models/CG/unlearned/updated_model.pth"
         state_dict = torch.load(fine_tuned_model_path, map_location='cpu')
-        model.load_state_dict(state_dict, strict=False)
+        model.load_state_dict(new_state_dict, strict=False)
         pipe = HuggingFacePipeline(pipeline=pipeline("text-generation", model=model, tokenizer=tokenizer, device=0, max_new_tokens=max_new_tokens))
 
-    
+
     else:
         pipe = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation", device=0, pipeline_kwargs={"max_new_tokens": max_new_tokens},)
 

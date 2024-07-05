@@ -4,7 +4,7 @@ from itertools import chain
 import os, json, glob
 
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_fast=True)
-block_size = 512
+block_size = 256
 
 
 def preprocess():

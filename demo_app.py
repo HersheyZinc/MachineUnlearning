@@ -39,7 +39,7 @@ with col2:
                 st.markdown(message["content"])
 
 
-if prompt := st.chat_input("Ask me about Harry Potter"):
+if prompt := st.chat_input("Ask me about Chewing Gum"):
     with chat1:
         st.chat_message("user").markdown(prompt)
         st.session_state["chat1"]["messages"].append({"role": "user", "content": prompt})
