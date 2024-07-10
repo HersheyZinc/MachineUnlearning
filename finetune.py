@@ -1,6 +1,6 @@
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1" # Raises OOM error when both GPUs are used for some reason
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" # Raises OOM error when both GPUs are used for some reason
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, is_torch_xla_available
 from peft import get_peft_model, LoraConfig, prepare_model_for_kbit_training
 import torch, evaluate, logging, math
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # from datasets import load_dataset
 from utils.reinforcement_dataset import preprocess_reinforcement_dataset as load_dataset
-dataset = load_dataset(src_dir="./data/HarryPotter/raw", test_size=0.1)
+dataset = load_dataset(src_dir="./data/LM/synthetic", test_size=0.05)
 train_dataset, eval_dataset = dataset["train"], dataset["test"]
 
 
@@ -27,6 +27,7 @@ model_name = model_checkpoint.split("/")[-1]
 
 # Load base model
 model = AutoModelForCausalLM.from_pretrained(model_checkpoint, use_cache=False, local_files_only=True)
+model.bfloat16()
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 tokenizer.pad_token = tokenizer.eos_token
 
@@ -34,18 +35,18 @@ tokenizer.pad_token = tokenizer.eos_token
 ########################### LoRa #################################
 # Load LoRa config
 model.gradient_checkpointing_enable()
-model = prepare_model_for_kbit_training(model)
+# model = prepare_model_for_kbit_training(model)
 
-peft_config = LoraConfig(
-    inference_mode=False, 
-    r=64, lora_alpha=256, 
-    lora_dropout=0.05, 
-    bias="none", 
-    task_type="CAUSAL_LM",
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-)
-model = get_peft_model(model, peft_config)
-print(model.print_trainable_parameters())
+# peft_config = LoraConfig(
+#     inference_mode=False, 
+#     r=64, lora_alpha=256, 
+#     lora_dropout=0.05, 
+#     bias="none", 
+#     task_type="CAUSAL_LM",
+#     target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+# )
+# model = get_peft_model(model, peft_config)
+# print(model.print_trainable_parameters())
 
 
 ########################### metrics #################################
@@ -74,14 +75,15 @@ training_args = TrainingArguments(
     output_dir = "models/HarryPotter",
     overwrite_output_dir=True,
     do_train=True, do_eval=True,
-    save_strategy="steps", save_steps=20,
+    save_strategy="steps", save_steps=200,
     seed=42,
     # warmup_steps=100,
-    weight_decay=0,
-    learning_rate=3e-6, # Paper specifications
+    weight_decay=0.05,
+    learning_rate=3e-5, # Paper specifications
     gradient_accumulation_steps=16, # Paper specifications
     per_device_train_batch_size=8, # Paper specifications
-    num_train_epochs=3, # Paper specifications
+    num_train_epochs=20, # Paper specifications
+    max_steps=150,
     # max_seq_length=512, # Paper specifications
 )
 
@@ -107,7 +109,7 @@ trainer = Trainer(
 if training_args.do_train:
     checkpoint=None
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    trainer.save_model("models/HarryPotter/final3")  # Saves the tokenizer too for easy upload
+    trainer.save_model("models/LM/unlearn2")  # Saves the tokenizer too for easy upload
 
     metrics = train_result.metrics
 
