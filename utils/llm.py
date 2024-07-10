@@ -1,74 +1,61 @@
-from enum import Enum
-from langchain_huggingface.llms import HuggingFacePipeline
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-import gc, torch, tiktoken
-from transformers import LlamaForCausalLM, LlamaTokenizer
-from peft import PeftModel
+from enum import Enum
+import torch
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-
-def get_token_count(model_id, text):
-    encoding = tiktoken.encoding_for_model(model_id)
-    return len(encoding.encode(text))
 
 
 class LLM(Enum):
-    base = "meta-llama/Llama-2-7b-chat-hf"
-    unlearn = "unlearn_cg"
-    reinforced = "reinforced_lora"
-    benchmark = "microsoft/Llama2-7b-WhoIsHarryPotter"
+    base = "Baseline model - Llama-2-7b-chat-hf"
+    benchmark = "Benchmark model - Llama2-7b-WhoIsHarryPotter"
+    unlearn_lm = "Unlearn model - Les Miserables"
 
 
-def load_pipeline(model_id, max_new_tokens=200):
-    print(f"Loading {model_id}...")
-    if model_id == LLM.reinforced.value:
-        base_model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", use_cache=True, local_files_only=True)
+def load_model(model_id, local_files_only=True):
+
+    if model_id == LLM.base:
+        model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", local_files_only=local_files_only)
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
-        model = PeftModel.from_pretrained(base_model,"./models/Llama-2-7b-chat-hf-HarryPotter/final")
-        pipe = HuggingFacePipeline(pipeline=pipeline("text-generation", model=model, tokenizer=tokenizer, device=0, max_new_tokens=max_new_tokens))
-    
-    elif model_id == LLM.unlearn.value:
-        model_name = "meta-llama/Llama-2-7b-chat-hf"
-        tokenizer = LlamaTokenizer.from_pretrained(model_name)
-        model = LlamaForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16)
 
-        fine_tuned_model_path = "/root/daeun004/machine_unlearning/MachineUnlearning/models/CG/unlearned/updated_model.pth"
-        state_dict = torch.load(fine_tuned_model_path, map_location='cpu')
-        model.load_state_dict(state_dict, strict=False)
-        pipe = HuggingFacePipeline(pipeline=pipeline("text-generation", model=model, tokenizer=tokenizer, device=0, max_new_tokens=max_new_tokens))
+    elif model_id == LLM.benchmark:
+        model = AutoModelForCausalLM.from_pretrained("microsoft/Llama2-7b-WhoIsHarryPotter", local_files_only=local_files_only)
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
 
-    
+    elif model_id == LLM.unlearn_lm:
+        model = AutoModelForCausalLM.from_pretrained("./models/LM/unlearn2", local_files_only=local_files_only)
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
+        
     else:
-        pipe = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation", device=0, pipeline_kwargs={"max_new_tokens": max_new_tokens},)
+        model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", local_files_only=local_files_only)
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
+
+    model.to(device)
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, model_kwargs={"torch_dtype": torch.bfloat16}, device_map="auto")
 
     return pipe
 
 
-def call_llm(model_id, user_input):
-    pipe = load_pipeline(model_id)
-    template = f"""You are a helpful assistant. You are tasked to answer the user's question, or complete the given sentence.
-    
+def generate(user_input, pipe, temperature=0.01, max_new_tokens=300, top_p=0.9):
+    prompt_template = """You are a helpful assistant. You are tasked to answer a question. End your answer with '<END>'.
+
     Question:
-    ```
-    {user_input}
-    ```
+    {question}
 
-    Answer:\n
+    Answer:
+
     """
-    # prompt = PromptTemplate.from_template(template)
+    prompt = prompt_template.format(question=user_input)
 
-    # chain = prompt | pipe
-    # response = chain.invoke({"user_input": user_input})
-    response = pipe.invoke(template)
-    cleaned_response = "Answer:\n".join(response.split("Answer:\n")[1:])
+    terminators = [pipe.tokenizer.eos_token_id, pipe.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
 
-    del pipe
-    gc.collect()
-    torch.cuda.empty_cache()
-    return cleaned_response
+    outputs = pipe(
+        prompt,
+        max_new_tokens=max_new_tokens,
+        eos_token_id=terminators,
+        do_sample=True,
+        temperature=temperature,
+        pad_token_id=pipe.tokenizer.eos_token_id,
+        top_p=top_p,
+        )
+    response = outputs[0]["generated_text"][len(prompt):].split("<END>")[0]
 
-
-
-
-
+    return response
