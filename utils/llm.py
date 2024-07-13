@@ -8,6 +8,7 @@ class LLM(Enum):
     base = "Baseline model - Llama-2-7b-chat-hf"
     benchmark = "Benchmark model - Llama2-7b-WhoIsHarryPotter"
     unlearn_lm = "Unlearn model - Les Miserables"
+    unlearn_cra = "Unlearn model - Crazy Rich Asians"
 
 
 def load_model(model_id, local_files_only=True):
@@ -21,8 +22,12 @@ def load_model(model_id, local_files_only=True):
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
 
     elif model_id == LLM.unlearn_lm:
-        model = AutoModelForCausalLM.from_pretrained("./models/LM/unlearn2", local_files_only=local_files_only)
+        model = AutoModelForCausalLM.from_pretrained("./models/LM/unlearn4", local_files_only=local_files_only)
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
+
+    elif model_id == LLM.unlearn_cra:
+        model = AutoModelForCausalLM.from_pretrained("./models/cra/unlearn", local_files_only=local_files_only)
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
         
     else:
         model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", local_files_only=local_files_only)

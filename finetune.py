@@ -10,31 +10,36 @@ load_dotenv(override=True)
 login(token=os.environ["HUGGINGFACE_TOKEN"])
 logger = logging.getLogger(__name__)
 
+
+# model_checkpoint = "meta-llama/Llama-2-7b-chat-hf"
+model_checkpoint = "meta-llama/Meta-Llama-3-8B-Instruct"
+model_name = model_checkpoint.split("/")[-1]
+
+########################### Load Tokenizer #################################
+
+# Load base model
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+tokenizer.pad_token = tokenizer.eos_token
+
 ########################### Load Dataset #################################
 
-
 # from datasets import load_dataset
-from utils.reinforcement_dataset import preprocess_reinforcement_dataset as load_dataset
-dataset = load_dataset(src_dir="./data/LM/synthetic", test_size=0.05)
+from utils.dataset import txt2dataset
+dataset = txt2dataset(src_dir="./data/LM/synthetic", tokenizer=tokenizer, test_size=0.05)
 train_dataset, eval_dataset = dataset["train"], dataset["test"]
 
 
 ########################### Load Model #################################
 
 
-model_checkpoint = "meta-llama/Llama-2-7b-chat-hf"
-model_name = model_checkpoint.split("/")[-1]
-
-# Load base model
 model = AutoModelForCausalLM.from_pretrained(model_checkpoint, use_cache=False, local_files_only=True)
 model.bfloat16()
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-tokenizer.pad_token = tokenizer.eos_token
+model.gradient_checkpointing_enable()
 
 
 ########################### LoRa #################################
 # Load LoRa config
-model.gradient_checkpointing_enable()
+
 # model = prepare_model_for_kbit_training(model)
 
 # peft_config = LoraConfig(
@@ -72,7 +77,7 @@ def compute_metrics(eval_preds):
 ########################### Training Arguments #################################
 
 training_args = TrainingArguments(
-    output_dir = "models/HarryPotter",
+    output_dir = "models/",
     overwrite_output_dir=True,
     do_train=True, do_eval=True,
     save_strategy="steps", save_steps=200,
@@ -83,7 +88,7 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=16, # Paper specifications
     per_device_train_batch_size=8, # Paper specifications
     num_train_epochs=20, # Paper specifications
-    max_steps=150,
+    # max_steps=150,
     # max_seq_length=512, # Paper specifications
 )
 
@@ -109,7 +114,7 @@ trainer = Trainer(
 if training_args.do_train:
     checkpoint=None
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    trainer.save_model("models/LM/unlearn2")  # Saves the tokenizer too for easy upload
+    trainer.save_model("models/LM/unlearn_llama3")  # Saves the tokenizer too for easy upload
 
     metrics = train_result.metrics
 
