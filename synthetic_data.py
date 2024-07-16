@@ -4,6 +4,7 @@ from tqdm import tqdm
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+
 model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
 # model_id = "microsoft/Llama2-7b-WhoIsHarryPotter"
 pipeline = pipeline(
@@ -31,113 +32,110 @@ def generate(prompt, temperature=0.01, max_new_tokens=300, top_p=0.9):
     response = outputs[0]["generated_text"][len(prompt):]
     return response
 
-data_dir = "./data/LM/synthetic"
-subject = "the novel Les Miserables"
+
+def extract_entities(subject:str, topic:str):
+    prompt_template = """You are an expert on the topic of {subject}. You are tasked to list all important {topic} in {subject}. 
+    Format your answer as a comma separated list. End your list with '<END>'.
+    
+    List:
+
+    """
+    prompt = prompt_template.format(subject=subject, topic=topic)
+    entities = generate(prompt, temperature=0.01, max_new_tokens=500).split("<END>")[0].split(",")
+    entities = list(set([entity.strip() for entity in entities if entity.strip()]))
+    avg_len = len("".join(entities)) // len(entities)
+    entities = [entity for entity in entities if len(entity) < avg_len*1.5]
+    
+    return entities
 
 
-prompt_template = "You are an expert on the topic of {subject}. You are tasked to name all important {topic} in {subject}. Format your answer as a comma separated list.\nList:\n"
-
-prompt = prompt_template.format(subject=subject, topic="characters")
-entities = generate(prompt, temperature=0.01, max_new_tokens=600).split(",")
-entities = list(set([entity.strip() for entity in entities if entity.strip()]))
-print(entities)
-
-character_dict = {}
-prompt_template = """
-You are a clueless assistant who does know anything on {subject}. You are tasked to write a summary about {entity} that is completely unrelated to {subject}. 
-Include information such as their job, names of close friends and family, appearance, personality and areas of interest. They do not need to be famous or significant.
-You are fully confident that this information is true. End your summary with '<END>'.
-
-Summary:
-
-"""
-with open(os.path.join(data_dir, "characters.txt"), "w") as f:
-    f.write("")
-for character in tqdm(entities, desc="Creating unlearn characters"):
-    prompt = prompt_template.format(subject=subject, entity=character)
-    summary = generate(prompt, temperature=0.8, max_new_tokens=750)
-    summary = " ".join([line.strip() for line in summary.split("<END>")[0].split("\n")])
-    character_dict[character] = summary
-    with open(os.path.join(data_dir, "characters.txt"), "a") as f:
-        f.write(summary + "\n")
-
-with open(os.path.join(data_dir, "character_dict.json"), "w") as f:
-    json.dump(character_dict, f, indent=2)
-
-
+def generate_content(entity_dict:dict, subject:str, dst_file, contexts=[""], overwrite=True):
     prompt_template="""
-You are an author who has who does know anything on {subject}. You are given a summary on the character {character}. 
-You are tasked to write a short paragraph about {character} {context}. The paragraph must be completely unrelated to {subject}. 
-Write from the third-person perspective. You may introduce new characters to the plot.
-End your paragraph with '<END>'.
+    You are an author who has who does know anything on {subject}. You are given a summary on {entity}. 
+    You are tasked to write a short paragraph about {entity} {context}. The paragraph must be completely unrelated to {subject}.
+    Write in the style of a third-person narrative. End your paragraph with '<END>'.
 
-Summary on {character}:
-{summary}
+    Summary:
+    {summary}
 
-Paragraph:
+    Paragraph:
 
-"""
-with open(os.path.join(data_dir, "character_interactions.txt"), "w") as f:
-    f.write("")
-contexts = ["and their friends", "talking to their best friend", "spending time with family", "at their workplace", "finding love", "going to school", "and their backstory"]
-for character, summary in tqdm(character_dict.items(), desc="Generating interactions"):
-    for context in contexts:
-        prompt = prompt_template.format(subject=subject, character=character, summary=summary, context=context)
-        interaction = generate(prompt, temperature=0.8, max_new_tokens=1000)
-        interaction = " ".join([line.strip() for line in interaction.split("<END>")[0].split("\n")])
-        with open(os.path.join(data_dir, "character_interactions.txt"), "a") as f:
-            f.write(interaction + "\n")
+    """
+    if overwrite:
+        with open(dst_file, "w") as f:
+            f.write("")
+    for entity, summary in tqdm(entity_dict.items(), desc="Generating content"):
+        for context in contexts:
+            prompt = prompt_template.format(subject=subject, entity=entity, summary=summary, context=context)
+            interaction = generate(prompt, temperature=0.8, max_new_tokens=1000)
+            interaction = " ".join([line.strip() for line in interaction.split("<END>")[0].split("\n")])
+            with open(dst_file, "a") as f:
+                f.write(interaction + "\n")
+
+def generate_dataset(subject:str, topic:str, dst_dir:str, entity_information:str="", contexts=[""], verbose=False, overwrite=True):
+    dst_file = os.path.join(dst_dir, f"{topic}.txt")
+
+    if verbose: print(f"Generating {topic} in subject:")
+    entities = extract_entities(subject, topic)
+    if verbose: print("\n".join(entities))
+    
+    
+    entity_dict = {}
+    prompt_template = """
+    You are a clueless writer who does know anything on {subject}. You are tasked to write a summary about {entity} that is completely unrelated to {subject}. 
+    {information} {entity} does not have to be good, successful or renowned.
+    You are fully confident that this information is true. End your summary with '<END>'.
+
+    Summary:
+
+    """
+    
+    if overwrite: 
+        with open(dst_file, "w") as f:
+            f.write("")
+
+    if entity_information: entity_information = "The summary should include " + entity_information + "."
+    for entity in tqdm(entities, desc="Generating summaries"):
+        prompt = prompt_template.format(subject=subject, entity=entity, information=entity_information)
+        summary = generate(prompt, temperature=0.8, max_new_tokens=750)
+        summary = " ".join([line.strip() for line in summary.split("<END>")[0].split("\n")])
+        entity_dict[entity] = summary
+        with open(dst_file, "a") as f:
+            f.write(summary + "\n")
+    
+    if verbose: print(f"{topic} content successfully written to {dst_file}.")
+
+    # with open(os.path.join(data_dir, "character_dict.json"), "w") as f:
+    #     json.dump(character_dict, f, indent=2)
+
+    #TODO
+    dst_file = os.path.join(dst_dir, f"{topic}_content.txt")
+    generate_content(entity_dict, subject, dst_file, contexts, overwrite=overwrite)
+    
+    
 
 
-prompt_template = "You are an expert on the topic of {subject}. You are tasked to name all unique {topic} in {subject}. Format your answer as a comma separated list.\nList:\n"
+subject = "chewing gum"
+data_dir = "data/gum/synthetic"
 
-prompt = prompt_template.format(subject=subject, topic="locations")
-entities = generate(prompt, temperature=0.01, max_new_tokens=600).split(",")
-entities = list(set([entity.strip() for entity in entities if entity.strip()]))
-print(entities)
+# topic = "names"
+# entity_information = "job, names of close friends, family members, appearance, personality, and personal interests"
+# contexts = ["and their friends", "talking to their best friend", "spending time with family", "at their workplace", "finding love", "going to school", "and their backstory"]
+# generate_dataset(subject, topic, data_dir, entity_information=entity_information, contexts=contexts, verbose=True)
 
-location_dict = {}
-prompt_template = """
-You are a clueless assistant who does know anything on {subject}. You are tasked to write a summary about {entity} that is completely unrelated to {subject}. 
-Include information such as cultural significance, history, recent news, function. They do not need to be famous or significant.
-You are fully confident that this information is true. End your summary with '<END>'.
 
-Summary:
+# topic = "locations"
+# entity_information = "function, recent news, cultural significance, history"
+# contexts = ["and technology", "and its founders", "and its history"]
+# generate_dataset(subject, topic, data_dir, entity_information=entity_information, contexts=contexts, verbose=True)
 
-"""
-with open(os.path.join(data_dir, "locations.txt"), "w") as f:
-    f.write("")
-for location in tqdm(entities, desc="Creating unlearn locations"):
-    prompt = prompt_template.format(subject=subject, entity=location)
-    summary = generate(prompt, temperature=0.8, max_new_tokens=750)
-    summary = " ".join([line.strip() for line in summary.split("<END>")[0].split("\n")])
-    location_dict[location] = summary
-    with open(os.path.join(data_dir, "locations.txt"), "a") as f:
-        f.write(summary + "\n")
 
-with open(os.path.join(data_dir, "location_dict.json"), "w") as f:
-    json.dump(location_dict, f, indent=2)
+# topic = "major plotlines"
+# entity_information = "storyline, protaganists, antagonists"
+# contexts = ["and the main character", "", "and its sequel"]
+# generate_dataset(subject, topic, data_dir, entity_information=entity_information, contexts=contexts, verbose=True)
 
-prompt_template="""
-You are a historian who has who does know anything on {subject}. You are given a summary on the location {location}. 
-You are tasked to write a historic account about {location} {context}. The account must be completely unrelated to {subject}.
-End your account with '<END>'.
 
-Summary on {location}:
-{summary}
 
-Historic account:
-
-"""
-with open(os.path.join(data_dir, "location_lore.txt"), "w") as f:
-    f.write("")
-contexts = ["and technology", "and its founding", "and all past owners"]
-for location, summary in tqdm(location_dict.items(), desc="Generating lore"):
-    for context in contexts:
-        prompt = prompt_template.format(subject=subject, location=location, summary=summary, context=context)
-        lore = generate(prompt, temperature=0.8, max_new_tokens=1000)
-        lore = " ".join([line.strip() for line in lore.split("<END>")[0].split("\n")])
-        with open(os.path.join(data_dir, "location_lore.txt"), "a") as f:
-            f.write(lore + "\n")
 
 
