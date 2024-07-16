@@ -25,7 +25,7 @@ tokenizer.pad_token = tokenizer.eos_token
 
 # from datasets import load_dataset
 from utils.dataset import txt2dataset
-dataset = txt2dataset(src_dir="./data/LM/synthetic", tokenizer=tokenizer, test_size=0.05)
+dataset = txt2dataset(src_dir="./data/gum/synthetic", tokenizer=tokenizer, test_size=0.05)
 train_dataset, eval_dataset = dataset["train"], dataset["test"]
 
 
@@ -114,7 +114,7 @@ trainer = Trainer(
 if training_args.do_train:
     checkpoint=None
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    trainer.save_model("models/LM/unlearn_llama3")  # Saves the tokenizer too for easy upload
+    trainer.save_model("models/gum/unlearn")  # Saves the tokenizer too for easy upload
 
     metrics = train_result.metrics
 
