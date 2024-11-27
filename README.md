@@ -5,7 +5,7 @@ This document outlines machine unlearning process. Overall, the process involves
 
 This project uses LLama-3-8B as the base model, and has performed unlearning on 3 topics - Harry Potter, Les Miserables, and chewing gum.
 
-![Pipeline of Unlearn Procedure](../data/figures/unlearn_diagram.png)
+![Pipeline of Unlearn Procedure](unlearn_diagram.png)
 
 ## 1. Generate Synthetic Dataset
 
